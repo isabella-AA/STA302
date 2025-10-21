@@ -9,8 +9,8 @@ date: "2025-10-21"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Proposed Reasearch Question 
-tryr tyry
+## Proposed Reasearch Question: How do library resources and infrastructure, financial investment and community characteristics predict the number of library visits per year? 
+
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
