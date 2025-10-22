@@ -3,6 +3,7 @@ title: "How do library resources and infrastructure, financial investment and co
 authors: "Isabella, Isla, Tala"
 output: pdf_document
 date: "2025-10-21"
+margin: 2.5cm
 ---
 
 ```{r setup, include=FALSE}
