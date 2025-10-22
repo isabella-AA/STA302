@@ -10,23 +10,29 @@ margin: 2.5cm
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Introduction
+# Introduction
 
 For our project, we are interested in understanding how we can predict the annual number of visitors to a library by examining the effects of a wide range of predictors, such as the size of the physical and digital collection, programs offered and their geographic locations in proximity to urban areas. 
 
-##Literature Summary
+## Literature Summary
 
-##Data Description
-The dataset was obtained from the Public Libraries Survey (PLS) 2023, conducted annually by the Institute of Museum and Library Services (IMLS) in the United States. The PLS was originally designed to provide standardized national data on public library operations, such as visits, staffing, and expenditures, to support policy and service improvement. Data are collected through an annual national census survey of public libraries, self-reported by each library and verified by state data coordinators via a centralized web-based system.
-#Data Description and Variable Summaries
-```{r cleaning_code, echo=FALSE, eval=FALSE}
+# Data Description
+
+The dataset was obtained from the Public Libraries Survey (PLS) 2023, conducted annually by the Institute of Museum and Library Services (IMLS) in the United States. The PLS was originally designed to provide standardized national data on public library operations, such as visits, staffing, and expenditures, to support policy and service improvement. Data is collected through an annual national census survey of public libraries, self-reported by each library and verified by state data coordinators via a centralized web-based system.
+
+## Variable Summaries
+
+```{r cleaning_code, echo=FALSE, eval=TRUE, include=FALSE}
 # loading and cleaning data 
 library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(purrr)
 rawdata <- read.csv(file ="PLS_FY23_AE_pud23i.csv")
 # extract relevant predictors
 rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP, TOTEXPCO, TOTOPEXP, POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
 # merge categorical variables
-library(dplyr)
 rawdata1 <- rawdata1 %>%
   mutate(
     LOCALE_GROUP = case_when(
@@ -54,10 +60,6 @@ clean_data <- na.omit(rawdata1)
 # Step 4: Confirm number of rows left
 nrow(clean_data)
 # characteristics 
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(purrr)
 cont_vars <- c("HRS_OPEN","TOTSTAFF","TOTPHYS","EBOOK","TOTPRO",
                "TOTATTEN","STAFFEXP","TOTEXPCO","TOTOPEXP",
                "POPU_LSA","WEBVISIT","GPTERMS","VISITS")
@@ -93,7 +95,6 @@ ggplot(clean_data[clean_data$TOTPRO < 20000, ],
        x = "Programs Offered", y = "Visits", color = "Locale") +
   theme_minimal()
 ## Scatter plots for key numerical predictors vs VISITS
-library(ggplot2)
 # Define the key predictors
 key_predictors <- c("TOTPRO", "STAFFEXP", "TOTPHYS")
 # Loop through each predictor to make scatter plots
@@ -110,10 +111,11 @@ for (var in key_predictors) {
   print(p)
 }
 ```
-After merging categorical location codes and removing missing values, the final dataset includes 5,110 observations, 12 numerical predictors, and one categorical variable, LOCALE_GROUP，indicating the library’s location type  (Urban, Suburban, Town, Rural). The response variable, VISITS, measures annual physical library visits. As a continuous, non-negative variable roughly proportional to library scale, VISITS is suitable for linear regression analysis.
-```{r table1, echo=FALSE}
+After merging categorical location codes and removing missing values, the final dataset includes 5,110 observations, 12 numerical predictors, and one categorical variable, LOCALE_GROUP, indicating the library’s location type  (Urban, Suburban, Town, Rural). The response variable, VISITS, measures annual physical library visits. As a continuous, non-negative variable roughly proportional to library scale, VISITS is suitable for linear regression analysis.
+```{r table1, echo=FALSE, fig.align='center'}
 library(knitr)
 library(dplyr)
+library(tidyr)
 cont_vars <- c("HRS_OPEN","TOTSTAFF","TOTPHYS","EBOOK","TOTPRO",
                "TOTATTEN","STAFFEXP","TOTEXPCO","TOTOPEXP",
                "POPU_LSA","WEBVISIT","GPTERMS","VISITS")
@@ -134,35 +136,36 @@ sum_table <- clean_data %>%
 kable(sum_table, caption = "Table 1: Numerical summaries of the location and spread of the data")
 ``` 
 Table 1 provides a numerical summary of all continuous predictors and response variable. Most numerical variables exhibit large ranges and standard deviations, suggesting substantial variation and the presence of outliers. In several variables, the mean exceeds the median, confirming right-skewness.
-```{r fig1, echo=FALSE, fig.cap="Figure 1. Distribution of VISITS", fig.width=6, fig.height=4}
+```{r fig1, echo=FALSE, fig.cap="Figure 1. Distribution of VISITS", fig.width=6, fig.height=4, fig.align='center'}
 hist(clean_data$VISITS[clean_data$VISITS], breaks = 50,
      main = "Distribution of VISITS", xlab = "Number of Visits",
      col = "skyblue", border = "white")
 ```
 Figure 1 shows the distribution of VISITS, which is highly right-skewed, indicating that most libraries have moderate visitor counts while a few receive extremely high visits.
-```{r fig2, echo=FALSE, fig.cap="Figure 2. Visits by Location Type", fig.width=6, fig.height=4}
+```{r fig2, echo=FALSE, fig.cap="Figure 2. Visits by Location Type", fig.width=6, fig.height=4, fig.align='center'}
 boxplot(VISITS ~ LOCALE_GROUP, data = clean_data,
         main = "Visits by Location Type",
         xlab = "Locale", ylab = "Number of Visits",
         col = "lightblue")
 ```
 Figure 2 compares VISITS across location types, where Urban libraries have the highest medians and greatest variability, while Town and Rural libraries show lower and more consistent levels. This supports including LOCALE_GROUP  as a categorical predictor in the regression.
-```{r fig3, echo=FALSE, fig.cap="Figure 3. Programs vs. Visits by Locale (<20k Programs)", fig.width=6, fig.height=4}
+```{r fig3, echo=FALSE, fig.cap="Figure 3. Programs vs. Visits by Locale (<20k Programs)", fig.width=6, fig.height=4, message=FALSE}
 ggplot(clean_data[clean_data$TOTPRO < 20000, ], aes(x = TOTPRO, y = VISITS, color = LOCALE_GROUP)) +
   geom_point(alpha = 0.3) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Programs Offered", y = "Visits", color = "Locale") +
   theme_minimal(base_size = 13)
 ```
-Figure 3 presents the relationship between TOTPRO and VISITS by locale. The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
 
-##Ethics Discussion
+Figure 3 presents the relationship between TOTPRO and VISITS by locale.The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
 
-##Preliminary Model Results
+# Ethics Discussion
 
-##Analysis and Team Plan
+# Preliminary Model Results
 
-##Bibliography
+# Analysis and Team Plan
+
+# Bibliography
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
