@@ -1,5 +1,5 @@
 ---
-title: "Project Proposal"
+title: "How do library resources and infrastructure, financial investment and community characteristics predict the number of library visits per year?"
 authors: "Isabella, Isla, Tala"
 output: pdf_document
 date: "2025-10-21"
@@ -9,29 +9,39 @@ date: "2025-10-21"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Proposed Reasearch Question 
-tryr tyry
+### Introduction
+
+For our project, we are interested in understanding how we can predict the annual number of visitors to a library by examining the effects of a wide range of predictors, such as the size of the physical and digital collection, programs offered and their geographic locations in proximity to urban areas. 
+
+##Literature Summary
+
+##Data Description
+
+```{r, echo=FALSE}
+# loading and cleaning data 
+library(tidyverse)
+rawdata <- read.csv(file ="PLS_FY23_AE_pud23i.csv")
+# extract relevant predictors
+rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP, TOTEXPCO, TOTOPEXP, POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
+
+
+```
+##Ethics Discussion
+
+##Preliminary Model Results
+
+##Analysis and Team Plan
+
+##Bibliography
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 
 can you see this?
 okok
 change 3
 change 4
+
+
