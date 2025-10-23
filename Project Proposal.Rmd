@@ -112,7 +112,7 @@ for (var in key_predictors) {
 }
 ```
 
-After merging categorical location codes and removing missing values, the final dataset includes 5,110 observations, 12 numerical predictors, and one categorical variable, LOCALE_GROUP, indicating the library’s location type  (Urban, Suburban, Town, Rural). The response variable, VISITS, measures annual physical library visits. As a continuous, non-negative variable roughly proportional to library scale, VISITS is suitable for linear regression analysis.
+After merging categorical location codes and removing missing values, the final dataset includes 5,110 observations, 12 numerical predictors, and one categorical variable, LOCALE_GROUP, indicating 4 library’s location types. The response variable, VISITS, measures annual physical library visits. As a continuous, non-negative variable roughly proportional to library scale, VISITS is suitable for linear regression analysis.
 
 Table 1 provides a numerical summary of all continuous predictors and response variable. Most numerical variables exhibit large ranges and standard deviations, suggesting substantial variation and the presence of outliers. In several variables, the mean exceeds the median, confirming right-skewness.
 ```{r table1, echo=FALSE, fig.align='center'}
@@ -165,7 +165,7 @@ hist(clean_data$VISITS[clean_data$VISITS], breaks = 50,
 
 Figure 2 compares VISITS across location types, where Urban libraries have the highest medians and greatest variability, while Town and Rural libraries show lower and more consistent levels. This supports including LOCALE_GROUP  as a categorical predictor in the regression.
 
-Figure 3 presents the relationship between TOTPRO and VISITS by locale.The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
+Figure 3 presents the relationship between number od programs and VISITS by locale.The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
 ```{r fig2, echo=FALSE, fig.cap="Visits by Location Type", fig.width=6, fig.height=4, fig.align='center'}
 boxplot(VISITS ~ LOCALE_GROUP, data = clean_data,
         main = "Visits by Location Type",
