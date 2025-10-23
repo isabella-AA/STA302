@@ -31,7 +31,7 @@ library(ggplot2)
 library(purrr)
 rawdata <- read.csv(file ="PLS_FY23_AE_pud23i.csv")
 # extract relevant predictors
-rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP, TOTEXPCO, TOTOPEXP, POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
+rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP, TOTEXPCO,POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
 # merge categorical variables
 rawdata1 <- rawdata1 %>%
   mutate(
@@ -61,7 +61,7 @@ clean_data <- na.omit(rawdata1)
 nrow(clean_data)
 # characteristics 
 cont_vars <- c("HRS_OPEN","TOTSTAFF","TOTPHYS","EBOOK","TOTPRO",
-               "TOTATTEN","STAFFEXP","TOTEXPCO","TOTOPEXP",
+               "TOTATTEN","STAFFEXP","TOTEXPCO",
                "POPU_LSA","WEBVISIT","GPTERMS","VISITS")
 sum_table <- clean_data %>%
   select(all_of(cont_vars)) %>%
@@ -69,12 +69,12 @@ sum_table <- clean_data %>%
   group_by(variable) %>%
   summarise(
     n = n(),
-    min = min(value, na.rm=TRUE),
-    q1 = quantile(value, 0.25, na.rm=TRUE),
-    median = median(value, na.rm=TRUE),
-    mean = mean(value, na.rm=TRUE),
-    q3 = quantile(value, 0.75, na.rm=TRUE),
-    max = max(value, na.rm=TRUE)
+    min = round(min(value, na.rm=TRUE),0),
+    q1 = round(quantile(value, 0.25, na.rm=TRUE),0),
+    median = round(median(value, na.rm=TRUE),0),
+    mean = round(mean(value, na.rm=TRUE),0),
+    q3 = round(quantile(value, 0.75, na.rm=TRUE),0),
+    max = round(max(value, na.rm=TRUE),0)
   )
 print(sum_table)
 table(clean_data$LOCALE_GROUP)
@@ -111,13 +111,17 @@ for (var in key_predictors) {
   print(p)
 }
 ```
+
 After merging categorical location codes and removing missing values, the final dataset includes 5,110 observations, 12 numerical predictors, and one categorical variable, LOCALE_GROUP, indicating the library’s location type  (Urban, Suburban, Town, Rural). The response variable, VISITS, measures annual physical library visits. As a continuous, non-negative variable roughly proportional to library scale, VISITS is suitable for linear regression analysis.
+
+Table 1 provides a numerical summary of all continuous predictors and response variable. Most numerical variables exhibit large ranges and standard deviations, suggesting substantial variation and the presence of outliers. In several variables, the mean exceeds the median, confirming right-skewness.
 ```{r table1, echo=FALSE, fig.align='center'}
 library(knitr)
 library(dplyr)
 library(tidyr)
+
 cont_vars <- c("HRS_OPEN","TOTSTAFF","TOTPHYS","EBOOK","TOTPRO",
-               "TOTATTEN","STAFFEXP","TOTEXPCO","TOTOPEXP",
+               "TOTATTEN","STAFFEXP","TOTEXPCO",
                "POPU_LSA","WEBVISIT","GPTERMS","VISITS")
 
 sum_table <- clean_data %>%
@@ -125,39 +129,65 @@ sum_table <- clean_data %>%
   pivot_longer(everything(), names_to = "Variables", values_to = "value") %>%
   group_by(Variables) %>%
   summarise(
-    Min = min(value, na.rm = TRUE),
-    Max = max(value, na.rm = TRUE),
-    Mean = round(mean(value, na.rm = TRUE), 2),
+    Min = round(min(value, na.rm = TRUE),0),
+    Max = round(max(value, na.rm = TRUE),0),
+    Mean= round(mean(value, na.rm = TRUE), 0),
     `Interquartile Range` = round(IQR(value, na.rm = TRUE), 2),
     Median = median(value, na.rm = TRUE),
     `Standard deviation` = round(sd(value, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Variables = recode(Variables,
+      "HRS_OPEN"  = "Total Annual Hours Open",
+      "TOTSTAFF"  = "Full-time Staff",
+      "TOTPHYS"   = "Total Physical Collection Size",
+      "EBOOK"     = "Ebooks",
+      "TOTPRO"    = "# of Synchronous Programs",
+      "TOTATTEN"  = "# Attendance at Synchronous Programs",
+      "STAFFEXP"  = "Staff Expenditure",
+      "TOTEXPCO"  = "Collection Expenditures",
+      "POPU_LSA"  = "Population Served",
+      "WEBVISIT"  = "Website Visits",
+      "GPTERMS"   = "# of Computers Available",
+      "VISITS"    = "Total Visits"
+    )
   )
 
-kable(sum_table, caption = "Table 1: Numerical summaries of the location and spread of the data")
+kable(sum_table, caption = "Numerical summaries of the location and spread of the data")
 ``` 
-Table 1 provides a numerical summary of all continuous predictors and response variable. Most numerical variables exhibit large ranges and standard deviations, suggesting substantial variation and the presence of outliers. In several variables, the mean exceeds the median, confirming right-skewness.
-```{r fig1, echo=FALSE, fig.cap="Figure 1. Distribution of VISITS", fig.width=6, fig.height=4, fig.align='center'}
+
+Figure 1 shows the distribution of VISITS, which is highly right-skewed, indicating that most libraries have moderate visitor counts while a few receive extremely high visits.
+```{r fig1, echo=FALSE, fig.cap="Distribution of VISITS", fig.width=6, fig.height=4, fig.align='center'}
 hist(clean_data$VISITS[clean_data$VISITS], breaks = 50,
      main = "Distribution of VISITS", xlab = "Number of Visits",
      col = "skyblue", border = "white")
 ```
-Figure 1 shows the distribution of VISITS, which is highly right-skewed, indicating that most libraries have moderate visitor counts while a few receive extremely high visits.
-```{r fig2, echo=FALSE, fig.cap="Figure 2. Visits by Location Type", fig.width=6, fig.height=4, fig.align='center'}
+
+Figure 2 compares VISITS across location types, where Urban libraries have the highest medians and greatest variability, while Town and Rural libraries show lower and more consistent levels. This supports including LOCALE_GROUP  as a categorical predictor in the regression.
+
+Figure 3 presents the relationship between TOTPRO and VISITS by locale.The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
+```{r fig2, echo=FALSE, fig.cap="Visits by Location Type", fig.width=6, fig.height=4, fig.align='center'}
 boxplot(VISITS ~ LOCALE_GROUP, data = clean_data,
         main = "Visits by Location Type",
         xlab = "Locale", ylab = "Number of Visits",
         col = "lightblue")
 ```
-Figure 2 compares VISITS across location types, where Urban libraries have the highest medians and greatest variability, while Town and Rural libraries show lower and more consistent levels. This supports including LOCALE_GROUP  as a categorical predictor in the regression.
-```{r fig3, echo=FALSE, fig.cap="Figure 3. Programs vs. Visits by Locale (<20k Programs)", fig.width=6, fig.height=4, message=FALSE}
+
+```{r fig3, echo=FALSE, fig.cap="Programs vs. Visits by Locale (<20k Programs)", fig.width=6, fig.height=4,fig.align='center',message = FALSE, warning = FALSE }
 ggplot(clean_data[clean_data$TOTPRO < 20000, ], aes(x = TOTPRO, y = VISITS, color = LOCALE_GROUP)) +
   geom_point(alpha = 0.3) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Programs Offered", y = "Visits", color = "Locale") +
-  theme_minimal(base_size = 13)
+  theme_minimal(base_size = 10)+
+  theme(
+    legend.position = c(0.8, 0.8),
+    legend.background = element_rect(fill = alpha('white', 0.6), color = NA),
+    legend.title = element_text(size = 9),
+    legend.text = element_text(size = 8)
+  )
 ```
 
-Figure 3 presents the relationship between TOTPRO and VISITS by locale.The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
+
 
 # Ethics Discussion
 
