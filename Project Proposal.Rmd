@@ -8,7 +8,7 @@ output:
 header-includes:
   - \usepackage{float}
 date: "2025-10-21"
-margin: 1 cm
+
 ---
 
 ```{r setup, include=FALSE}
@@ -49,7 +49,6 @@ library(tidyr)
 library(ggplot2)
 library(purrr)
 library(knitr)
-
 
 rawdata <- read.csv(file ="PLS_FY23_AE_pud23i.csv")
 # extract relevant predictors
@@ -218,51 +217,8 @@ ggplot(clean_data[clean_data$TOTPRO < 20000, ], aes(x = TOTPRO, y = VISITS, colo
 # initial linear model 
 initial_model <- lm(VISITS ~ TOTSTAFF + TOTPHYS + EBOOK + TOTPRO + TOTATTEN + STAFFEXP +  TOTEXPCO + POPU_LSA + WEBVISIT + GPTERMS + HRS_OPEN, data = clean_data)
 
-
-y_value <- resid(initial_model)
-y_value2 <- clean_data$VISITS
-x_value <- fitted(initial_model)
-
-# first create plots for to check conditional mean predictor and conditional mean response conditions 
-
-# pairs(clean_data[,3:15])
-predictors <- clean_data[, c("TOTSTAFF","TOTPRO","TOTATTEN",
-                             "STAFFEXP","TOTEXPCO","HRS_OPEN")]
-
-# compute correlation matrix
-cor_mat <- cor(predictors, use = "pairwise.complete.obs")  # handles missing values
-
-# the correlation matrix
-round(cor_mat, 2) 
-
-par(mfrow=c(3,2))
-important_vars <- c("TOTSTAFF","STAFFEXP","TOTATTEN","TOTEXPCO")
-pairs(clean_data[important_vars])
-
-
-plot(x = x_value, y = y_value2, main = "Response vs. Fitted", xlab = "Fitted", ylab = "Response - Visits")
-
-# check homoscedasticity,linearity and normal errors assumptions with plot of residual vs fitted from initial model
-plot (x = x_value, y = y_value, main="Residual vs. Fitted", xlab = "Fitted", ylab = "Residuals")
-
-# check assumptions with categorical variable - location
-boxplot(y_value ~ clean_data$LOCALE_GROUP, main="Residuals vs. Location", xlab = "Locations", ylab= "Residuals")
-
-# check normality assumption with QQ plot
-qqnorm(y_value)
-qqline(y_value)
-
-
-#library(car)
-#crPlots(initial_model)
- 
-
-```
-```{r model estimates table, echo=FALSE}
-tidy_mod <- broom::tidy(initial_model)
-
-
-tidy_mod <- tidy_mod %>%
+estimates_table <- broom::tidy(initial_model)
+estimates_table <- estimates_table %>%
   mutate(
     estimate = round(estimate, 2),
     std.error = round(std.error, 2),
@@ -270,8 +226,7 @@ tidy_mod <- tidy_mod %>%
     p.value = round(p.value, 4)
   )
 
-
-tidy_mod <- tidy_mod %>%
+estimates_table <- estimates_table %>%
   mutate(
     signif = case_when(
       p.value < 0.001 ~ "***",
@@ -282,7 +237,7 @@ tidy_mod <- tidy_mod %>%
     )
   )
 
-final_table <- tidy_mod %>%
+final_table <- estimates_table %>%
   select(term, estimate, std.error, statistic, p.value, signif)
 final_table2 <- final_table %>% mutate(
     term = recode(term,
@@ -302,6 +257,76 @@ final_table2 <- final_table %>% mutate(
 kable(final_table2, caption = "Preliminary Model Estimates from Linear Regression")
 ```
 
+The initial model yields some surprising results, as certain predictors, such as physical collection size or ebooks are in the opposite direction expected (negative), and their effects appear minimal (-0.02). The number of programs offered is the only predictor which appears not significant in the presence of all other predictors, which also contradicts Noh and Chang (2020)’s findings. However, as we further examine the assumptions of the model, it’s clear that many of the assumptions have been violated, making the values uninformative for now.
+
+To ensure that plots correctly identify violations and linear regression is valid, we first check the conditional mean predictor condition. We see that for most predictors, this has been satisfied; however for total number of staff, staff expenditure, total program attendance and total collection expenditure, the condition is violated. Computing the correlation between variables revealed that there are some strong linear relationships between them, alluding to multicollinearity, which would explain the violations present.
+
+
+```{r preliminary model plots for conditional mean predictor, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Plots for checking conditional mean predictor condition"}
+y_value <- resid(initial_model)
+y_value2 <- clean_data$VISITS
+x_value <- fitted(initial_model)
+
+
+# first examine all 11 predictors
+par(mfrow = c(3,4))
+library(car)
+crPlots(initial_model, ylab = "Residuals")
+
+# the identified predictors below have severe violations: 
+predictors <- clean_data[, c("TOTSTAFF","TOTPRO","TOTATTEN",
+                             "STAFFEXP","TOTEXPCO","HRS_OPEN")]
+par(mfrow = c(1,1))
+# compute correlation matrix to confirm potential multicollinearity (linear relationship between predictors)
+cor_mat <- cor(predictors) 
+
+# ensure matrix is clear and easy to understand by changing column names
+
+name_map <- c(
+  "TOTSTAFF"  = "Full-time Staff",
+  "TOTPHYS"   = "Total Physical Collection Size",
+  "EBOOK"     = "Ebooks",
+  "TOTPRO"    = "# of Synchronous Programs",
+  "TOTATTEN"  = "# Attendance at Synchronous Programs",
+  "STAFFEXP"  = "Staff Expenditure",
+  "TOTEXPCO"  = "Collection Expenditures",
+  "POPU_LSA"  = "Population Served",
+  "WEBVISIT"  = "Website Visits",
+  "GPTERMS"   = "# of Computers Available",
+  "HRS_OPEN"  = "Total Annual Hours Open"
+)
+
+colnames(cor_mat) <- name_map[colnames(cor_mat)]
+rownames(cor_mat) <- name_map[rownames(cor_mat)]
+kable(round(cor_mat, 2), caption = "Correlation Matrix of Predictors")
+```
+
+For the mean conditional response condition, the response against fitted plot shows that this assumption has mostly been upheld, but outliers from libraries with a high number of annual visits (> 2 × 10⁶) violate this condition, observed by deviations from the y = x line at the end .
+
+
+```{r preliminary model plots for conditional mean response, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Plot for conditional mean response condition", fig.height=4, fig.width=6}
+# Plot for conditional mean response condition
+plot(x = x_value, y = y_value2, main = "Response vs. Fitted", xlab = "Fitted", ylab = "Response:- Visits")
+```
+
+As for the linear model assumptions, the plots indicate the constant variance assumption has been violated, due to the funnel shape residuals appear to have. This is further verified when we look at the residuals for our categorical variable, location, where libraries in urban areas have a much larger variation compared to suburban, town and rural libraries. Finally, the QQ plot highlights the normality assumption being violated, due to the curving away observed quantiles from the theoretical quantiles. 
+
+
+
+```{r preliminary model plots for assumptions of MLR, echo=FALSE, fig.align='center', fig.height= 10}
+# Plot to check homoscedasticity,linearity and normal errors assumptions with plot of residual vs fitted from initial model
+par(mfrow = c(3,1))
+plot (x = x_value, y = y_value, main="Residual vs. Fitted", xlab = "Fitted", ylab = "Residuals")
+
+# Plot to check assumptions with categorical variable - location
+boxplot(y_value ~ clean_data$LOCALE_GROUP, main="Residuals vs. Location", xlab = "Locations", ylab= "Residuals")
+
+# Plot to check normality assumption with QQ plot
+qqnorm(y_value)
+qqline(y_value)
+
+```
+
 
 # Analysis and Team Plan
 
@@ -311,25 +336,16 @@ kable(final_table2, caption = "Preliminary Model Estimates from Linear Regressio
 
 # Bibliography
 
-Cheng, W. W. H., Lam, E. T. H., & Chiu, D. K. (2020). Social media as a platform in academic library marketing: A comparative study. The Journal of Academic Librarianship, 46(5), 102188. https://doi.org/10.1016/j.acalib.2020.102188
 
-Howard, J. (2019, Fall). The complicated role of the modern public library. National 
-Endowment for the Humanities.
-https://www.neh.gov/article/complicated-role-modern-public-library
+Cheng, W. W. H., Lam, E. T. H., & Chiu, D. K. (2020). Social media as a platform in academic library marketing: A   comparative study. The Journal of Academic Librarianship, 46(5), 102188.            | https://doi.org/10.1016/j.acalib.2020.102188
 
-Joo, S., & Cahill, M. (2017). The relationships between the expenditures and resources of
-public libraries and children’s and young adults’ use: An exploratory analysis of
-Institute of Museum and Library Services public library statistics data. Journal of
-Librarianship and Information Science, 51(2), 307–316.
-https://doi.org/10.1177/0961000617709057
+Howard, J. (2019, Fall). The complicated role of the modern public library. National Endowment for the Humanities.https://www.neh.gov/article/complicated-role-modern-public-library
 
-Noh, Y., & Chang, R. (2020). A study on the factors of public library use by residents.
-Journal of Librarianship and Information Science, 52(4),
-1110–1125.https://doi.org/10.1177/0961000620903772
+Joo, S., & Cahill, M. (2017). The relationships between the expenditures and resources of public libraries and children’s and young adults’ use: An exploratory analysis of Institute of Museum and Library Services public library statistics data. Journal of Librarianship and Information Science, 51(2), 307–316. https://doi.org/10.1177/0961000617709057
 
-Public Libraries Survey (PLS). (n.d.). Institute of Museum and Library Services.
-https://www.imls.gov/research-evaluation/surveys/public-libraries-survey-pls
+Noh, Y., & Chang, R. (2020). A study on the factors of public library use by residents. Journal of Librarianship and Information Science, 52(4), 1110–1125.https://doi.org/10.1177/0961000620903772
 
+Public Libraries Survey (PLS). (n.d.). Institute of Museum and Library Services. https://www.imls.gov/research-evaluation/surveys/public-libraries-survey-pls
 
 
 
