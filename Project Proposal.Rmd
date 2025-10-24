@@ -1,9 +1,14 @@
 ---
 title: "How do library resources and infrastructure, financial investment and community characteristics predict the number of library visits per year?"
-authors: "Isabella, Isla, Tala"
-output: pdf_document
+author: "Isabella, Isla, Tala"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    includes: null
+header-includes:
+  - \usepackage{float}
 date: "2025-10-21"
-margin: 2.5cm
+margin: 1 cm
 ---
 
 ```{r setup, include=FALSE}
@@ -16,9 +21,23 @@ For our project, we are interested in understanding how we can predict the annua
 
 ## Literature Summary
 
+An important predictor is total expenditure and resource investment which reflects a library’s capacity to maintain and expand user materials. Joo and Cahill (2017) found a strong correlation between expenditures, resources, and childrens' and young adults’ use, suggesting that higher investment may significantly increase annual visit frequency.
+
+Additionally, annual website visits may also predict physical visits. According to Cheng et al. (2020), they identified that tailoring social media content and activity to their users’ needs increased engagement, potentially leading to more in-person visits. This provides theoretical support for using digital engagement metrics as predictors for user interest and likelihood of physical visits to libraries. We will also assess factors such as geographic locations, staff, programs, and services. Noh and Chang (2020) found that materials, facilities and interior design, space, staff, programs all significantly predicted user satisfaction and library use.
+
+Collectively, prior literature supports that our predictors can influence library visits. We believe our findings could benefit both the public library users, and government agencies that fund them, as libraries provide a free, inclusive welcoming space for the public. If governments know how to best allocate funds and investments, they can ensure resources are effective in improving numbers of users and their experience (The Complicated Role of the Modern Public Library, n.d.).
+
+
+## Sustainability of Linear Regression
+
+A multiple linear regression model is preferred over non-modelling approaches because it quantifies how resource characteristics jointly influence visits rather than only describing associations. Most predictors are continuous, allowing straightforward estimation of linear relationships between predictors and the response variable. Moreover, previous studies have shown linear relationships between variables such as staffing and expenditure, supporting the model’s theoretical validity. The regression coefficients indicate how each predictor contributes to visit frequency while controlling other factors, whereas the interaction term captures how the effect of one factor depends on the level of another. The p-values and confidence intervals evaluate the statistical significance and precision of these effects, whereas the R² statistic summarizes how well the combined predictors explain the variation in visits across libraries.  
+
+By quantifying these factors, the model helps decision makers identify which investments most effectively increase public engagement. Students and community members can also benefit from improved accessibility and allocation of library services based on the model’s findings.
+
+
 # Data Description
 
-The dataset was obtained from the Public Libraries Survey (PLS) 2023, conducted annually by the Institute of Museum and Library Services (IMLS) in the United States. The PLS was originally designed to provide standardized national data on public library operations, such as visits, staffing, and expenditures, to support policy and service improvement. Data is collected through an annual national census survey of public libraries, self-reported by each library and verified by state data coordinators via a centralized web-based system.
+The dataset was obtained from the Public Libraries Survey (PLS) 2023, conducted annually by the Institute of Museum and Library Services (IMLS) in the United States. The PLS was originally designed to provide standardized national data on public library operations, such as visits, staffing, and expenditures, to support policy and service improvement (Public Libraries Survey (PLS), n.d.). Data is collected through an annual national census survey of public libraries, self-reported by each library and verified by state data coordinators via a centralized web-based system.
 
 ## Variable Summaries
 
@@ -29,6 +48,9 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(purrr)
+library(knitr)
+
+
 rawdata <- read.csv(file ="PLS_FY23_AE_pud23i.csv")
 # extract relevant predictors
 rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP, TOTEXPCO,POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
@@ -53,6 +75,7 @@ sum(is.na(rawdata1$LOCALE_GROUP))
 rawdata1[rawdata1 == -1] <- NA
 rawdata1[rawdata1 == -3] <- NA
 rawdata1[rawdata1 == -9] <- NA
+rawdata1[rawdata1 == -4] <- NA
 # Step 2: Check missing counts
 colSums(is.na(rawdata1))
 # Step 3: Remove rows containing NA
@@ -116,9 +139,6 @@ After merging categorical location codes and removing missing values, the final 
 
 Table 1 provides a numerical summary of all continuous predictors and response variable. Most numerical variables exhibit large ranges and standard deviations, suggesting substantial variation and the presence of outliers. In several variables, the mean exceeds the median, confirming right-skewness.
 ```{r table1, echo=FALSE, fig.align='center'}
-library(knitr)
-library(dplyr)
-library(tidyr)
 
 cont_vars <- c("HRS_OPEN","TOTSTAFF","TOTPHYS","EBOOK","TOTPRO",
                "TOTATTEN","STAFFEXP","TOTEXPCO",
@@ -157,7 +177,7 @@ kable(sum_table, caption = "Numerical summaries of the location and spread of th
 ``` 
 
 Figure 1 shows the distribution of VISITS, which is highly right-skewed, indicating that most libraries have moderate visitor counts while a few receive extremely high visits.
-```{r fig1, echo=FALSE, fig.cap="Distribution of VISITS", fig.width=6, fig.height=4, fig.align='center'}
+```{r fig1, echo=FALSE, fig.cap="Distribution of VISITS", fig.width=6, fig.height=4, fig.align='center', fig.pos='H'}
 hist(clean_data$VISITS[clean_data$VISITS], breaks = 50,
      main = "Distribution of VISITS", xlab = "Number of Visits",
      col = "skyblue", border = "white")
@@ -166,14 +186,15 @@ hist(clean_data$VISITS[clean_data$VISITS], breaks = 50,
 Figure 2 compares VISITS across location types, where Urban libraries have the highest medians and greatest variability, while Town and Rural libraries show lower and more consistent levels. This supports including LOCALE_GROUP  as a categorical predictor in the regression.
 
 Figure 3 presents the relationship between number od programs and VISITS by locale.The positive slopes across all groups indicate that offering more programs increases visits, with steeper slopes for Urban and Suburban libraries. This suggests an interaction effect between program and location, which will be incorporated into the preliminary regression model.
-```{r fig2, echo=FALSE, fig.cap="Visits by Location Type", fig.width=6, fig.height=4, fig.align='center'}
+
+```{r fig2, echo=FALSE, fig.cap="Visits by Location Type", fig.width=6, fig.height=4, fig.align='center', fig.pos='H'}
 boxplot(VISITS ~ LOCALE_GROUP, data = clean_data,
         main = "Visits by Location Type",
         xlab = "Locale", ylab = "Number of Visits",
         col = "lightblue")
 ```
 
-```{r fig3, echo=FALSE, fig.cap="Programs vs. Visits by Locale (<20k Programs)", fig.width=6, fig.height=4,fig.align='center',message = FALSE, warning = FALSE }
+```{r fig3, echo=FALSE, fig.cap="Programs vs. Visits by Locale (<20k Programs)", fig.width=5.5, fig.height=3.5,fig.align='center',message = FALSE, warning = FALSE, fig.pos = 'H' }
 ggplot(clean_data[clean_data$TOTPRO < 20000, ], aes(x = TOTPRO, y = VISITS, color = LOCALE_GROUP)) +
   geom_point(alpha = 0.3) +
   geom_smooth(method = "lm", se = FALSE) +
@@ -193,13 +214,44 @@ ggplot(clean_data[clean_data$TOTPRO < 20000, ], aes(x = TOTPRO, y = VISITS, colo
 
 # Preliminary Model Results
 
+```{r preliminary model plots, echo=FALSE}
+# initial linear model 
+initial_model <- lm(VISITS ~ TOTSTAFF + TOTPHYS + EBOOK + TOTPRO + TOTATTEN + STAFFEXP +  TOTEXPCO + POPU_LSA + WEBVISIT + GPTERMS + HRS_OPEN, data = clean_data)
+summary(initial_model)
+      
+   
+```
+
+
 # Analysis and Team Plan
+
+## Analysis Plan
+
+## Team Plan
 
 # Bibliography
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Cheng, W. W. H., Lam, E. T. H., & Chiu, D. K. (2020). Social media as a platform in academic library marketing: A comparative study. The Journal of Academic Librarianship, 46(5), 102188. https://doi.org/10.1016/j.acalib.2020.102188
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Howard, J. (2019, Fall). The complicated role of the modern public library. National 
+Endowment for the Humanities.
+https://www.neh.gov/article/complicated-role-modern-public-library
+
+Joo, S., & Cahill, M. (2017). The relationships between the expenditures and resources of
+public libraries and children’s and young adults’ use: An exploratory analysis of
+Institute of Museum and Library Services public library statistics data. Journal of
+Librarianship and Information Science, 51(2), 307–316.
+https://doi.org/10.1177/0961000617709057
+
+Noh, Y., & Chang, R. (2020). A study on the factors of public library use by residents.
+Journal of Librarianship and Information Science, 52(4),
+1110–1125.https://doi.org/10.1177/0961000620903772
+
+Public Libraries Survey (PLS). (n.d.). Institute of Museum and Library Services.
+https://www.imls.gov/research-evaluation/surveys/public-libraries-survey-pls
+
+
+
 
 
 
