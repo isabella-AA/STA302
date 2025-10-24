@@ -217,9 +217,89 @@ ggplot(clean_data[clean_data$TOTPRO < 20000, ], aes(x = TOTPRO, y = VISITS, colo
 ```{r preliminary model plots, echo=FALSE}
 # initial linear model 
 initial_model <- lm(VISITS ~ TOTSTAFF + TOTPHYS + EBOOK + TOTPRO + TOTATTEN + STAFFEXP +  TOTEXPCO + POPU_LSA + WEBVISIT + GPTERMS + HRS_OPEN, data = clean_data)
-summary(initial_model)
-      
-   
+
+
+y_value <- resid(initial_model)
+y_value2 <- clean_data$VISITS
+x_value <- fitted(initial_model)
+
+# first create plots for to check conditional mean predictor and conditional mean response conditions 
+
+# pairs(clean_data[,3:15])
+predictors <- clean_data[, c("TOTSTAFF","TOTPRO","TOTATTEN",
+                             "STAFFEXP","TOTEXPCO","HRS_OPEN")]
+
+# compute correlation matrix
+cor_mat <- cor(predictors, use = "pairwise.complete.obs")  # handles missing values
+
+# the correlation matrix
+round(cor_mat, 2) 
+
+par(mfrow=c(3,2))
+important_vars <- c("TOTSTAFF","STAFFEXP","TOTATTEN","TOTEXPCO")
+pairs(clean_data[important_vars])
+
+
+plot(x = x_value, y = y_value2, main = "Response vs. Fitted", xlab = "Fitted", ylab = "Response - Visits")
+
+# check homoscedasticity,linearity and normal errors assumptions with plot of residual vs fitted from initial model
+plot (x = x_value, y = y_value, main="Residual vs. Fitted", xlab = "Fitted", ylab = "Residuals")
+
+# check assumptions with categorical variable - location
+boxplot(y_value ~ clean_data$LOCALE_GROUP, main="Residuals vs. Location", xlab = "Locations", ylab= "Residuals")
+
+# check normality assumption with QQ plot
+qqnorm(y_value)
+qqline(y_value)
+
+
+#library(car)
+#crPlots(initial_model)
+ 
+
+```
+```{r model estimates table, echo=FALSE}
+tidy_mod <- broom::tidy(initial_model)
+
+
+tidy_mod <- tidy_mod %>%
+  mutate(
+    estimate = round(estimate, 2),
+    std.error = round(std.error, 2),
+    statistic = round(statistic, 2),
+    p.value = round(p.value, 4)
+  )
+
+
+tidy_mod <- tidy_mod %>%
+  mutate(
+    signif = case_when(
+      p.value < 0.001 ~ "***",
+      p.value < 0.01  ~ "**",
+      p.value < 0.05  ~ "*",
+      p.value < 0.1   ~ ".",
+      TRUE            ~ ""
+    )
+  )
+
+final_table <- tidy_mod %>%
+  select(term, estimate, std.error, statistic, p.value, signif)
+final_table2 <- final_table %>% mutate(
+    term = recode(term,
+      "HRS_OPEN"  = "Total Annual Hours Open",
+      "TOTSTAFF"  = "Full-time Staff",
+      "TOTPHYS"   = "Total Physical Collection Size",
+      "EBOOK"     = "Ebooks",
+      "TOTPRO"    = "# of Synchronous Programs",
+      "TOTATTEN"  = "# Attendance at Synchronous Programs",
+      "STAFFEXP"  = "Staff Expenditure",
+      "TOTEXPCO"  = "Collection Expenditures",
+      "POPU_LSA"  = "Population Served",
+      "WEBVISIT"  = "Website Visits",
+      "GPTERMS"   = "# of Computers Available",
+      "VISITS"    = "Total Visits"))
+
+kable(final_table2, caption = "Preliminary Model Estimates from Linear Regression")
 ```
 
 
