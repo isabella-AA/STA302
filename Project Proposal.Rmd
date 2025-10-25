@@ -18,7 +18,7 @@ For our project, we are interested in understanding how we can predict the annua
 
 # Data Description
 
-The dataset was obtained from the Public Libraries Survey (PLS) 2023, conducted annually by the Institute of Museum and Library Services (IMLS) in the United States. The PLS was originally designed to provide standardized national data on public library operations, such as visits, staffing, and expenditures, to support policy and service improvement. Data is collected through an annual national census survey of public libraries, self-reported by each library and verified by state data coordinators via a centralized web-based system.
+The dataset was obtained from the Public Libraries Survey (PLS) 2023, conducted annually by the Institute of Museum and Library Services (IMLS) in the United States. The PLS was originally designed to provide standardized national data on public library operations, such as visits, staffing, and expenditures, to support policy and service improvement. Data is collected through an annual national census survey of public libraries, self-reported by each library and verified by state data coordinators via a centralized web-based system.(Add citation)
 
 ## Variable Summaries
 
@@ -31,7 +31,7 @@ library(ggplot2)
 library(purrr)
 rawdata <- read.csv(file ="PLS_FY23_AE_pud23i.csv")
 # extract relevant predictors
-rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP, TOTEXPCO,POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
+rawdata1 <- subset(as.data.frame(rawdata), select = c(VISITS, LIBNAME, HRS_OPEN, TOTSTAFF, TOTPHYS, EBOOK, TOTPRO, TOTATTEN, STAFFEXP,TOTEXPCO, POPU_LSA, WEBVISIT, GPTERMS, LOCALE_MOD))
 # merge categorical variables
 rawdata1 <- rawdata1 %>%
   mutate(
